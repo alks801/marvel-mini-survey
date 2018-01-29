@@ -1,0 +1,39 @@
+﻿<div class="interview-container res">
+    <div class="character-img-container" style="background-image: url(/images/characters/@(ViewBag.CharId).jpg);">
+    </div>
+    <div class="character-name-container">
+        <div class="character-name bold-text">
+            You are @(ViewBag.CharName)!
+        </div>
+    </div>
+    <div class="character-description-container">
+        <div class="character-description">
+            @(ViewBag.CharDescription)
+        </div>
+    </div>
+    <div class="actions-container">
+        <div class="fb-share action-button fb-share-button"
+             data-href="my-site"><img src="~/images/fb.png" />Share</div>
+        <div class="new-interview action-button">Start again</div>
+    </div>
+    <div class="footer">
+        <div class="rules-container">Mini survey by <a href="https://github.com/sn0wil" target="_blank">sn0wil</a></div>
+
+    </div>
+    <div class="logo-container"></div>
+</div>
+
+@section scripts {
+    <script src="~/js/Sharing.js" asp-append-version="true"></script>
+    <script src="~/js/fb_sdk.js"></script>
+    <script>
+ var charId =@(ViewBag.CharId);
+        FB.init({
+            appId: 'someAppId',
+            status: true,
+            cookie: true,
+            xfbml: true,
+            version: 'v2.11'
+        });
+    </script>
+}
