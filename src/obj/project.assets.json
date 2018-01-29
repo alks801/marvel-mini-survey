@@ -12541,11 +12541,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\Users\\denisevich\\Documents\\Projects\\sn0wil\\mini-survey\\src\\mini-survey.csproj",
+      "projectUniqueName": "C:\\Users\\denisevich\\Documents\\Projects\\sn0wil\\mini-survey\\src\\mini-survey.csproj",
       "projectName": "mini-survey",
-      "projectPath": "c:\\Users\\denisevich\\Documents\\Projects\\sn0wil\\mini-survey\\src\\mini-survey.csproj",
+      "projectPath": "C:\\Users\\denisevich\\Documents\\Projects\\sn0wil\\mini-survey\\src\\mini-survey.csproj",
       "packagesPath": "C:\\Users\\denisevich\\.nuget\\packages\\",
-      "outputPath": "c:\\Users\\denisevich\\Documents\\Projects\\sn0wil\\mini-survey\\src\\obj\\",
+      "outputPath": "C:\\Users\\denisevich\\Documents\\Projects\\sn0wil\\mini-survey\\src\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"

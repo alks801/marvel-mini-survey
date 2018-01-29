@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MiniSurvey.Models;
 using Newtonsoft.Json.Serialization;
 
 namespace MiniSurvey
@@ -28,6 +30,7 @@ namespace MiniSurvey
                 options.SerializerSettings.ContractResolver =
                     new CamelCasePropertyNamesContractResolver();
             });
+            services.AddDbContext<MiniSurveyContext>(options => options.UseSqlServer(Configuration.GetConnectionString("TestDb")));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

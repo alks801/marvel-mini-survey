@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using MiniSurvey.Models;
 
@@ -13,11 +14,188 @@ namespace MiniSurvey.Controllers
 {
     public class HomeController : Controller
     {
-        [Route("")]
-        public async Task<IActionResult> Pre(int charId = 0)
+        private readonly MiniSurveyContext _db;
+
+        //static client data (questions, answers)
+        private static ClientData _data;
+
+        //static client data about characters
+        
+        private static List<Character> _characters;
+        public HomeController(MiniSurveyContext db)
+        {
+            _db = db;
+        }
+
+        [Route("interview")]
+        public IActionResult Interview()
         {
             ViewBag.MobileClass = IsMobile(Request) ? "mobile" : "";
 
+            return View();
+        }
+
+        [Route("")]
+        public IActionResult Pre(int charId = 0)
+        {
+            ViewBag.MobileClass = IsMobile(Request) ? "mobile" : "";
+            if (charId != 0)
+                ViewBag.CharId = charId;
+            return View();
+        }
+
+
+        [Route("post-characters")]
+        [HttpPost]
+        public async Task<IActionResult> PostCharacters(Dictionary<int, CharacterClientInfo> characterPoints, bool isMan, int interviewId)
+        {
+            if (characterPoints == null)
+                characterPoints = _data.CharacterPoints;
+
+            int charId = 1;
+            try
+            {
+                var curCharacters = characterPoints
+                    .Where(x => x.Value.IsMan == isMan)
+                    .OrderByDescending(x => x.Value.Points)
+                    .Take(2) //Take 2 top characters
+                    .Select(s => new { s.Key, s.Value.Points }).ToList();
+
+                //if characters have similar point we can just randomly pick one
+                if (curCharacters[0].Points == curCharacters[1].Points)
+                {
+                    Random r = new Random(DateTime.Now.Millisecond);
+                    charId = curCharacters[r.Next(0, 2)].Key;
+                }
+                else
+                    charId = curCharacters.Where(p => p.Points == curCharacters.Max(m => m.Points)).FirstOrDefault().Key;
+
+                await _db.CharacterResults.AddAsync(new CharacterResult { InterviewId = interviewId, CharacterId = charId });
+                await _db.SaveChangesAsync();
+
+            }
+            catch (Exception ex)
+            {
+                await _db.CharacterResults.AddAsync(new CharacterResult { InterviewId = interviewId, CharacterId = -1, AddInfo = ex.Message });
+                await _db.SaveChangesAsync();
+            }
+
+            return Content(charId.ToString());
+        }
+
+
+        [Route("get-model")]
+        [HttpPost]
+        public async Task<IActionResult> GetModel()
+        {
+            if (_data == null)
+            {
+                //simpliest caching server data about characters
+                _data = new ClientData();
+                _data.Questions = (await _db.Questions.Include("Answers").ToListAsync()).Select(x => new ClientQuestion(x)).ToList();
+                _data.CharacterPoints = _db.Characters.Select(c => new { c.Id, c.IsMan }).ToDictionary(k => k.Id, v => new CharacterClientInfo { Points = 0, IsMan = v.IsMan });
+            }
+
+            var interview = new Interview
+            {
+                DateCreated = DateTime.Now,
+                QuestionId = 1
+            };
+
+            _db.Interviews.Add(interview);
+            _db.SaveChanges();
+
+            var model = new ClientModel
+            {
+                Data = _data,
+                InterviewId = interview.Id,
+                StatTotalInterviewCount = await _db.Interviews.Where(i => i.IsEnded).CountAsync(),
+                IsMobile = IsMobile(Request),
+                CurrentQuestionId = 1
+            };
+
+            return Json(model);
+        }
+
+        [Route("post-result")]
+        [HttpPost]
+        //get stats for answered question (percents per answer)
+        public async Task<IActionResult> GetStats(int interviewId, int questionId, int answerId)
+        {
+            try
+            {
+                await _db.Results.AddAsync(new Result { InterviewId = interviewId, QuestionId = questionId, AnswerId = answerId });
+                await _db.SaveChangesAsync();
+
+                var interview = await _db.Interviews.FirstAsync(i => i.Id == interviewId);
+                interview.QuestionId = questionId;
+                if (questionId == 11)
+                    interview.IsEnded = true;
+
+                _db.Interviews.Update(interview);
+                await _db.SaveChangesAsync();
+
+                var qResuts = _db.Results.Where(r => r.QuestionId == questionId);
+
+                int totalQResults = await qResuts.CountAsync();
+                var qst = await _db.Questions.Include("Answers").FirstAsync(q => q.Id == questionId);
+                var answerIds = qst.Answers.ToList().Select(a => a.Id).ToList();
+                Dictionary<int, int> res = new Dictionary<int, int>();//answerId, percent
+                foreach (var aId in answerIds)
+                {
+                    var curAnswerCount = await qResuts.Where(r => r.AnswerId == aId).CountAsync();
+                    var percent = totalQResults == 0 ? 0 : GetPercent(curAnswerCount, totalQResults);
+                    res.Add(aId, percent);
+                }
+
+                //if we have summ != 100 (decimal) we should make it = 100 for better view
+                var sum = res.Sum(x => x.Value);
+                int dp = 100 - sum;
+                var last = res.Last();
+                int val = last.Value + dp;
+                if (val >= 0)
+                    res[last.Key] = val;
+
+                else
+                {
+                    var k = res.FirstOrDefault(r => r.Value > 0);
+                    res[k.Key] = k.Value + dp;
+                }
+                return Json(res);
+            }
+            catch (Exception ex)
+            {
+                return Json("");
+            }
+        }
+
+        //Get percent from total count
+        private int GetPercent(int current, int total)
+        {
+            double curr = current;
+            double tot = total;
+            double res = (curr / tot) * 100;
+            res = Math.Round(res, 1);
+            return Convert.ToInt32(res);
+        }
+
+        [Route("result")]
+        public IActionResult Result(int charId = 1)
+        {
+            ViewBag.MobileClass = IsMobile(Request) ? "mobile" : "";
+
+
+            //simpliest character info caching
+            if (_characters == null)
+                _characters = _db.Characters.ToList();
+
+            if (charId < 1 || charId > 11)
+                charId = 1;
+
+            var _char = _characters.Find(c => c.Id == charId);
+            ViewBag.CharDescription = _char?.Description;
+            ViewBag.CharName = _char?.Name;
+            ViewBag.CharId = charId;
             return View();
         }
 
@@ -26,6 +204,7 @@ namespace MiniSurvey.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
+        //Identify mobile device by Request
         private bool IsMobile(HttpRequest req)
         {
             string userAgent = req.Headers[HeaderNames.UserAgent].ToString();

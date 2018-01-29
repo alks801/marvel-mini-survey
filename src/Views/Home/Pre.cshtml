@@ -2,7 +2,18 @@
 @{
     ViewData["Title"] = "Pre";
 }
-
+@if (ViewBag.CharId != null)
+{
+    @section og {
+        <meta property="og:url" content="mysite/mini-test/?charId=@(ViewBag.CharId)" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Who are you in the Marvel" />
+        <meta property="og:description" content="Let's see who are you the Marvel Universe" />
+        <meta property="og:image" content="mysite/mini-test/images/sharing/@(ViewBag.CharId).png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+    }
+}
 
 <div class="interview-container pre">
     <div class="status-container w">
