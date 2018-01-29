@@ -1,0 +1,34 @@
+﻿
+@{
+    ViewData["Title"] = "Pre";
+}
+
+
+<div class="interview-container pre">
+    <div class="status-container w">
+
+    </div>
+    <div class="question-container w">
+        <div class="question-title bold-text w">
+            Who are you in the Marvel Universe?
+        </div>
+        <div class="answer-container">
+            Mini survey.
+        </div>
+        <div class="answer-button-container w">
+            <a href="/interview" class="answer-button p">
+                Start
+            </a>
+        </div>
+    </div>
+    <div class="logo-container">
+        <div class="logo">
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        sessionStorage.interviewId = -1;
+    </script>
+}
